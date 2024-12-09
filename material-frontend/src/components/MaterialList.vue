@@ -77,22 +77,15 @@ export default {
 
     const filteredMaterials = computed(() => {
       const query = searchQuery.value.toLowerCase()
-      if (!query) return props.materials
-
-      const filtered = {}
-      for (const [name, versions] of Object.entries(props.materials)) {
-        if (
-          name.toLowerCase().includes(query) ||
-          versions.some(v => 
-            v.standard.toLowerCase().includes(query) ||
-            v.description.toLowerCase().includes(query) ||
-            v.data.Material.Category.toLowerCase().includes(query)
-          )
-        ) {
-          filtered[name] = versions
-        }
+      if (query==''||query==null) {
+        return props.materials
       }
-      return filtered
+
+      return Object.fromEntries(
+        Object.entries(props.materials).filter(([name]) => 
+          name.toLowerCase().includes(query)
+        )
+      )
     })
 
     const isSelected = (material) => {

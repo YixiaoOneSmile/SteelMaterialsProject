@@ -78,7 +78,7 @@ def clean_html(html_content):
     
     return cleaned_html
 
-def process_folder(input_folder, output_folder, material_name=None):
+def process_folder(input_folder, output_folder, material_name=None, filename=None):
     # 确保输出文件夹存在
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -93,9 +93,13 @@ def process_folder(input_folder, output_folder, material_name=None):
             current_folder = os.path.basename(root)
             if current_folder != material_name:
                 continue
-                
+        
         for file in files:
             if file.endswith('.html'):
+                # 如果指定了文件名，则只处理匹配的文件
+                if filename and not file.startswith(f"{filename}"):
+                    continue
+                
                 # 构建输入文件的完整路径
                 input_path = os.path.join(root, file)
                 
@@ -130,7 +134,8 @@ if __name__ == "__main__":
     
     # 创建命令行参数解析器
     parser = argparse.ArgumentParser(description='清理HTML文件')
-    parser.add_argument('--material', type=str, help='指定要处理的材料名称文件夹', default=None)
+    parser.add_argument('-m', '--material', type=str, help='指定要处理的材料名称', default=None)
+    parser.add_argument('-f', '--filename', type=str, help='指定要处理的文件名（如：42CrMo4_20240318_123456）', default=None)
     args = parser.parse_args()
     
     # 设置输入和输出文件夹
@@ -138,9 +143,11 @@ if __name__ == "__main__":
     output_folder = "./data/clean_html_data"
     
     # 使用命令行参数调用函数
-    process_folder(input_folder, output_folder, args.material)
+    process_folder(input_folder, output_folder, args.material, args.filename)
     
     if args.material:
         print(f"材料 {args.material} 的文件处理完成！")
+        if args.filename:
+            print(f"处理的文件: {args.filename}")
     else:
         print("所有文件处理完成！") 

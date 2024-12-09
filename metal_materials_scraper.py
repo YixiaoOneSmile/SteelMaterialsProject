@@ -75,7 +75,15 @@ option.add_argument('--blink-settings=imagesEnabled=false')
 def random_sleep():
     time.sleep(random.uniform(2, 5))
 
-def scrape_materials(materials_list, driver, base_url):
+def clean_name(text: str) -> str:
+    """清理名称中的空格"""
+    return text.replace(' ', '')
+
+def clean_standard(text: str) -> str:
+    """将标准中的空格和斜杠替换为下划线"""
+    return text.replace(' ', '_').replace('/', '_')
+
+def scrape_materials(materials_list, driver, base_url, standard=None):
     """爬取材料数据的主要函数"""
     try:
         for material_index, material in enumerate(materials_list, 1):
@@ -83,63 +91,83 @@ def scrape_materials(materials_list, driver, base_url):
             print(f"正在处理第 {material_index}/{len(materials_list)} 个材料: {material}")
             print(f"{'='*50}")
             
-            material_folder = os.path.join('data/html_data', material)
+            material_folder = os.path.join('data/html_data', clean_name(material))
             if not os.path.exists(material_folder):
                 os.makedirs(material_folder)
 
-            # 在新标签页打开搜索页面
-            driver.execute_script("window.open('');")
-            driver.switch_to.window(driver.window_handles[-1])
-            driver.get(base_url.format(keyword=material))
-            random_sleep()
+            material_found = False
+            page = 1
+            max_pages = 2  # 设置最大翻页次数，避免无限循环
 
-            rows = driver.find_elements(By.XPATH, '//table[@class="layui-table head-sticky"]/tbody/tr')
-            print(f"找到 {len(rows)} 个搜索结果")
-            
-            processed_count = 0
-            
-            for row_index, row in enumerate(rows, 1):
-                try:
-                    name_element = WebDriverWait(row, 10).until(
-                        EC.visibility_of_element_located((By.XPATH, './td[2]/a'))
-                    )
-                    name = name_element.text.strip()
-                    detail_link = name_element.get_attribute('href')
-                except NoSuchElementException:
-                    print(f"第 {row_index} 行未找到材料名称元素")
-                    continue
+            while not material_found and page <= max_pages:
+                # 在新标签页打开搜索页面
+                driver.execute_script("window.open('');")
+                driver.switch_to.window(driver.window_handles[-1])
+                current_url = base_url.format(keyword=material, page=page)
+                print(f"\n访问页面: {current_url}")
+                driver.get(current_url)
+                random_sleep()
 
-                if name.replace(' ', '') == material.replace(' ', ''):
-                    processed_count += 1
-                    print(f"\n处理进度: {row_index}/{len(rows)} - 当前材料: {name}")
-                    
-                    # 在新标签页打开详情页
-                    driver.execute_script("window.open('');")
-                    driver.switch_to.window(driver.window_handles[-1])
-                    driver.get(detail_link)  # 直接使用get而不是execute_script
-                    random_sleep()
-                    
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    filename = f"{name}_{timestamp}.html"
-                    filepath = os.path.join(material_folder, filename)
-                    
-                    with open(filepath, 'w', encoding='utf-8') as f:
-                        f.write(driver.page_source)
-                    print(f"√ 已保存: {filepath}")
+                rows = driver.find_elements(By.XPATH, '//table[@class="layui-table head-sticky"]/tbody/tr')
+                print(f"第{page}页找到 {len(rows)} 个搜索结果")
+                
+                if len(rows) == 0:
+                    print(f"第{page}页没有搜索结果，停止翻页")
+                    break
 
-                    # 关闭详情页标签
-                    driver.close()
-                    driver.switch_to.window(driver.window_handles[-1])
-                else:
-                    print(f"× 跳过第 {row_index} 行 - 材料名称不匹配: {name}")
-            
-            # 关闭当前材料的搜索页标签
-            driver.close()
-            driver.switch_to.window(driver.window_handles[0])
+                for row_index, row in enumerate(rows, 1):
+                    try:
+                        name_element = WebDriverWait(row, 10).until(
+                            EC.visibility_of_element_located((By.XPATH, './td[2]/a'))
+                        )
+                        name = name_element.text.strip()
+                        detail_link = name_element.get_attribute('href')
+                        
+                        # 获取标准元素
+                        standard_element = row.find_element(By.XPATH, './td[3]//b')
+                        row_standard = standard_element.text.strip()
+                    except NoSuchElementException:
+                        print(f"第 {row_index} 行未找到材料名称或标准元素")
+                        continue
+
+                    # 检查材料名称和标准是否匹配
+                    if clean_name(name) == clean_name(material) and (standard is None or row_standard == standard):
+                        material_found = True
+                        print(f"\n处理进度: {row_index}/{len(rows)} - 当前材料: {name} - 标准: {row_standard}")
+                        
+                        # 在新标签页打开详情页
+                        driver.execute_script("window.open('');")
+                        driver.switch_to.window(driver.window_handles[-1])
+                        driver.get(detail_link)
+                        random_sleep()
+                        
+                        # 生成文件名：材料名_标准
+                        filename = f"{clean_name(name)}_{clean_standard(row_standard)}.html"
+                        filepath = os.path.join(material_folder, filename)
+                        
+                        with open(filepath, 'w', encoding='utf-8') as f:
+                            f.write(driver.page_source)
+                        print(f"√ 已保存: {filepath}")
+
+                        # 关闭详情页标签
+                        driver.close()
+                        driver.switch_to.window(driver.window_handles[-1])
+                    else:
+                        print(f"× 跳过第 {row_index} 行 - 材料名称或标准不匹配: {name} - {row_standard}")
+                
+                # 关闭当前页面标签
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])
+                
+                if not material_found:
+                    print(f"\n第{page}页未找到匹配的材料和标准，继续翻页")
+                    page += 1
+                
+            if not material_found:
+                print(f"\n未找到材料 {material} 的匹配记录")
             
             print(f"\n{'*'*30}")
             print(f"材料 {material} 处理完成")
-            print(f"处理结果: {processed_count}/{len(rows)}")
             print(f"{'*'*30}")
 
     except Exception as e:
@@ -152,10 +180,14 @@ def scrape_materials(materials_list, driver, base_url):
 def main():
     import argparse
     
-    # 创建命令行参数解析器
     parser = argparse.ArgumentParser(description='爬取材料数据')
-    parser.add_argument('--material', type=str, help='指定要爬取的单个材料', default=None)
+    parser.add_argument('-m', '--material', type=str, help='指定要爬取的单个材料', default=None)
+    parser.add_argument('-s', '--standard', type=str, help='指定材料的对应标准（如包含空格请用引号括起来）', default=None, nargs='+')
     args = parser.parse_args()
+    
+    # 如果标准是以列表形式传入的，将其合并为字符串
+    standard = ' '.join(args.standard) if args.standard else None
+    print(f"标准: {standard}")
     
     # 所有可用的材料列表
     all_materials = ['06Cr19Ni10', '10', '10#', '100C6', '100Cr6', '100Cr6-E', '100Cr6-G', 
@@ -200,10 +232,10 @@ def main():
         '''
     })
     
-    base_url = "https://www.caishuku.com/material/?keyword={keyword}"
+    base_url = "https://www.caishuku.com/material/?keyword={keyword}&page={page}"
     
     # 执行爬取
-    scrape_materials(materials_to_process, driver, base_url)
+    scrape_materials(materials_to_process, driver, base_url, standard)
 
 if __name__ == "__main__":
     main()

@@ -39,13 +39,13 @@
         </div>
       </template>
       <div class="standard-info">
-        <h4>所属标准</h4>
+        <h4>标准名称</h4>
         <div class="standard-item" v-if="material.Material.BelongsToStandard">
           <span class="standard-code">{{ material.Material.BelongsToStandard.StandardCode }}</span>
           <span class="standard-desc">{{ material.Material.BelongsToStandard.Description }}</span>
         </div>
         
-        <h4>相关标准</h4>
+        <h4>该牌号所属的全部标准</h4>
         <div class="standard-list">
           <div v-for="(standard, index) in material.Material.AllStandards" 
                :key="index" 
@@ -60,7 +60,7 @@
     <el-card class="info-section">
       <template #header>
         <div class="card-header">
-          <span>化学成分</span>
+          <span>化学成分要求</span>
         </div>
       </template>
       <el-table :data="chemicalComposition" stripe style="width: 100%">
@@ -80,18 +80,18 @@
     <el-card class="info-section">
       <template #header>
         <div class="card-header">
-          <span>机械性能</span>
+          <span>机械性能要求</span>
         </div>
       </template>
       <el-tabs>
-        <el-tab-pane label="性能条件">
+        <el-tab-pane label="性能条件要求">
           <el-table :data="material.MechanicalProperties.Conditions" stripe>
             <el-table-column prop="Property" label="性能" />
             <el-table-column prop="Condition" label="条件" />
             <el-table-column prop="Value" label="数值" />
           </el-table>
         </el-tab-pane>
-        <el-tab-pane label="热处理工艺">
+        <el-tab-pane label="热处理工艺要求">
           <el-table :data="material.MechanicalProperties.HeatTreatment" stripe>
             <el-table-column prop="Process" label="工艺" />
             <el-table-column prop="TemperatureRange" label="温度范围" />
@@ -108,7 +108,7 @@
       </div>
     </el-card>
 
-    <el-card class="info-section" v-if="material.PhysicalProperties.Properties.length">
+    <el-card class="info-section" >
       <template #header>
         <div class="card-header">
           <span>物理性能</span>
@@ -116,8 +116,8 @@
       </template>
       <el-table :data="material.PhysicalProperties.Properties" stripe>
         <el-table-column prop="Property" label="性能" />
+        <el-table-column prop="Condition" label="条件" />
         <el-table-column prop="Value" label="数值" />
-        <el-table-column prop="Unit" label="单位" />
       </el-table>
     </el-card>
 

@@ -25,6 +25,7 @@ var/
 
 # 数据文件夹
 data/
+!data/JsonData/
 
 # IDE
 .idea/

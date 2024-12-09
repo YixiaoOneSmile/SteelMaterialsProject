@@ -1,11 +1,14 @@
 <template>
   <div class="app-wrapper">
+
     <MaterialList 
       :materials="materials" 
       :selectedMaterial="selectedMaterial"
       @select-material="selectMaterial" 
     />
+
     <MaterialDetail :material="selectedMaterial" />
+
   </div>
 </template>
 
@@ -14,11 +17,13 @@ import { ref, onMounted } from 'vue'
 import MaterialList from './components/MaterialList.vue'
 import MaterialDetail from './components/MaterialDetail.vue'
 
+
 export default {
   name: 'App',
   components: {
     MaterialList,
-    MaterialDetail
+    MaterialDetail,
+
   },
   setup() {
     const materials = ref({})
@@ -26,7 +31,9 @@ export default {
 
     const fetchMaterials = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:5000/api/materials')
+        // 使用环境变量来控制 API 地址
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+        const response = await fetch(`${baseUrl}/api/materials`)
         materials.value = await response.json()
       } catch (error) {
         console.error('Error fetching materials:', error)

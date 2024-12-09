@@ -4,7 +4,8 @@ from openai import OpenAI
 from bs4 import BeautifulSoup
 from typing import Dict, List
 import argparse
-
+import time
+import json
 # 加载环境变量
 load_dotenv()
 
@@ -229,15 +230,15 @@ def clean_json_string(json_string: str) -> str:
         json_string = json_string[:-4]
     return json_string
 
-def process_folder(base_path: str, output_base_path: str, material_name: str = None):
+def process_folder(base_path: str, output_base_path: str, material_name: str = None, filename: str = None):
     """处理文件夹中的所有HTML文件，每个文件单独生成对应的JSON
     Args:
         base_path: 输入文件夹路径
         output_base_path: 输出文件夹路径
         material_name: 指定要处理的材料名称，默认为None处理所有材料
+        filename: 指定要处理的文件名，默认为None处理所有文件
     """
     material_folders = os.listdir(base_path)
-    material_folders = material_folders[3:]  # 跳过前三个文件夹
     
     # 如果指定了材料名称，只处理该材料
     if material_name:
@@ -260,10 +261,14 @@ def process_folder(base_path: str, output_base_path: str, material_name: str = N
         os.makedirs(output_folder, exist_ok=True)
 
         html_files = os.listdir(folder_path)
-        html_files =html_files[1:]
+        
         # 处理每个HTML文件
         for html_file in html_files:
             if not html_file.endswith('.html'):
+                continue
+                
+            # 如果指定了文件名，则只处理匹配的文件
+            if filename and not html_file.startswith(f"{filename}"):
                 continue
                 
             file_path = os.path.join(folder_path, html_file)
@@ -296,7 +301,8 @@ def process_folder(base_path: str, output_base_path: str, material_name: str = N
 def main():
     # 创建命令行参数解析器
     parser = argparse.ArgumentParser(description='将HTML文件转换为JSON格式')
-    parser.add_argument('--material', type=str, help='指定要处理的材料名称', default=None)
+    parser.add_argument('-m', '--material', type=str, help='指定要处理的材料名称', default=None)
+    parser.add_argument('-f', '--filename', type=str, help='指定要处理的文件名（如：42CrMo4_20240318_123456）', default=None)
     args = parser.parse_args()
     
     base_path = "./data/clean_html_data"
@@ -306,10 +312,12 @@ def main():
     os.makedirs(output_base_path, exist_ok=True)
     
     # 处理文件
-    process_folder(base_path, output_base_path, args.material)
+    process_folder(base_path, output_base_path, args.material, args.filename)
     
     if args.material:
         print(f"\n材料 {args.material} 的转换处理完成!")
+        if args.filename:
+            print(f"处理的文件: {args.filename}")
     else:
         print("\n所有材料转换处理完成!")
 

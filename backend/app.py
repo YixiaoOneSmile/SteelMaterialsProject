@@ -34,13 +34,18 @@ def get_materials():
                             'description': standard_info.get('Description', '')
                         })
                 
+                # 按 standard 排序
+                material_versions.sort(key=lambda x: x['standard'])
+                
                 if material_versions:
                     materials_dict[material_name] = material_versions
-    
-        return jsonify(materials_dict)
+        
+        # 将 materials_dict 转换为有序字典并按材料名称排序
+        sorted_materials = dict(sorted(materials_dict.items(), key=lambda x: x[0]))
+        return jsonify(sorted_materials)
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(host='0.0.0.0', port=5001, debug=True) 
